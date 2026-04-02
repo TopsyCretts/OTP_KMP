@@ -1,0 +1,7 @@
+<resources>
+    <string name="enter_code_headline">Enter code please</string>
+    <string name="loading">Loading...</string>
+    <string name="code_error">Incorrect code</string>
+    <string name="wait_for_code">Waiting for code</string>
+    <string name="welcome">Welcome</string>
+</resources>
