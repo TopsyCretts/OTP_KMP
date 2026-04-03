@@ -62,7 +62,7 @@ Instead of relying on unstable key events, we compare the **Old Value** and **Ne
 private const val ZeroWidthChar = '\u200B'
 
 // Force the text field to always have the hidden char when "empty"
-var text by remember(number) {
+val text by remember(number) {
     mutableStateOf(
         TextFieldValue(
             text = number?.toString() ?: ZeroWidthChar.toString(),
