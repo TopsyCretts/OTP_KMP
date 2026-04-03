@@ -16,7 +16,11 @@ import androidx.compose.ui.unit.dp
 import com.arkivanov.decompose.extensions.compose.subscribeAsState
 import org.otp.example.core.presentation.otp_code_component.ui.CodeButton
 
-
+/**
+ * The UI representation of the OTP Code component.
+ * It observes the state from the [OtpCodeComponent] and manages focus transitions
+ * between multiple [CodeButton] inputs.
+ */
 @Composable
 fun OtpCodeContent(
     modifier: Modifier = Modifier,
@@ -27,28 +31,32 @@ fun OtpCodeContent(
     error: Boolean = false
 ) {
     val state by component.state.subscribeAsState()
+    
+    // Create a FocusRequester for each digit slot
     val focusRequesters = remember {
         List(component.codeLength) { FocusRequester() }
     }
+    
     val focusManager = LocalFocusManager.current
     val keyboardManager = LocalSoftwareKeyboardController.current
 
+    // Automatically request focus based on the component's state
     LaunchedEffect(state.focusedIndex) {
         state.focusedIndex?.let { index ->
             focusRequesters.getOrNull(index)?.requestFocus()
         }
     }
 
+    // Hide the keyboard and clear focus once the entire code is filled
     LaunchedEffect(state.code, keyboardManager) {
         val allNumbersEntered = state.code.none { it == null }
         if (allNumbersEntered) {
-            focusRequesters.forEach {
-                it.freeFocus()
-            }
+            focusRequesters.forEach { it.freeFocus() }
             focusManager.clearFocus()
             keyboardManager?.hide()
         }
     }
+
     Row(
         modifier = modifier,
         verticalAlignment = verticalAlignment,

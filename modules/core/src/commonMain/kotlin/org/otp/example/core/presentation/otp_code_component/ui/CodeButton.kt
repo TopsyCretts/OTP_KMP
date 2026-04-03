@@ -36,8 +36,22 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 
+/**
+ * A Zero-Width Space character (\u200B) used to maintain content in an "empty" TextField.
+ * This allows the [onValueChange] callback to fire even when the user deletes the 
+ * visible content, providing a cross-platform way to detect backspace events.
+ */
 private const val ZeroWidthChar = '\u200B'
 
+/**
+ * A single digit input field for the OTP component.
+ * 
+ * @param focusRequester Used to programmatically control focus for this field.
+ * @param number The current digit value (0-9) or null if empty.
+ * @param onFocusChanged Callback triggered when the focus state of this field changes.
+ * @param onNumberChanged Callback triggered when a new digit is entered or the field is cleared.
+ * @param onKeyboardBack Callback triggered when the backspace/delete key is pressed on an empty field.
+ */
 @Composable
 fun CodeButton(
     focusRequester: FocusRequester,
@@ -51,11 +65,10 @@ fun CodeButton(
 ) {
     val shape = MaterialTheme.shapes.medium
     var focused by remember { mutableStateOf(false) }
+    
     Box(
         modifier = modifier
-            .alpha(
-                if (enabled) 1f else 0.5f
-            )
+            .alpha(if (enabled) 1f else 0.5f)
             .size(48.dp)
             .clip(shape)
             .dropShadow(
@@ -68,9 +81,11 @@ fun CodeButton(
             .border(
                 border = BorderStroke(
                     width = 1.dp,
-                    color = if (error) MaterialTheme.colorScheme.error
-                    else if (focused) MaterialTheme.colorScheme.primary
-                    else Color.Transparent
+                    color = when {
+                        error -> MaterialTheme.colorScheme.error
+                        focused -> MaterialTheme.colorScheme.primary
+                        else -> Color.Transparent
+                    }
                 ),
                 shape = shape
             )
@@ -80,52 +95,54 @@ fun CodeButton(
             ),
         contentAlignment = Alignment.Center
     ) {
+        // We wrap the number in a TextFieldValue to control the cursor position
         var text by remember(number) {
             mutableStateOf(
                 TextFieldValue(
                     text = number?.toString() ?: ZeroWidthChar.toString(),
-                    //"_|" to insert new char after ZeroWidthChar or delete ZeroWidthChar
+                    // Force the cursor to stay after the ZeroWidthChar (index 1).
+                    // This ensures that any input or deletion changes the string length, 
+                    // triggering the 'onValueChange' callback.
                     selection = TextRange(index = 1)
                 )
             )
         }
+
         BasicTextField(
             value = text,
             cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-            // hack in this solution is in ZeroWidthChar
-            // if we store it in text field value we now have 2 things:
-            // 1. onValueChange function will be triggered, because even it is a ZeroWidthChar
-            // it is still a char -> value changed -> callback triggers
-            // 2. user do not see cursor translation because of stored char in text field value
-            // and for user this text field is really empty, but not for us
+            /*
+             * IMPLEMENTATION NOTE: Cross-platform Backspace Detection
+             * On some mobile platforms (especially iOS), 'onKeyEvent' does not reliably 
+             * capture soft keyboard delete events. To solve this, we:
+             * 1. Always keep at least one character (ZeroWidthChar) in the field.
+             * 2. If the user presses backspace, that character is deleted.
+             * 3. We detect this deletion in 'onValueChange' and trigger 'onKeyboardBack'.
+             */
             onValueChange = { newValue ->
                 val oldText = text.text
                 val newText = newValue.text
-                if (oldText == newText) {
-                    return@BasicTextField
-                }
+                
+                // Ignore updates if nothing actually changed
+                if (oldText == newText) return@BasicTextField
 
-                // here we check what WAS in the text field before editing
-                if (oldText.all { it == ZeroWidthChar }) { // "empty" field
-
-                    // here we check what user entered
-                    // if it is digit, then we can fill the field
-                    // if there is empty (null) -> convert to ZeroWidthChar
-                    // to prevent nullable
-                    val newChar = newText.lastOrNull() ?: ZeroWidthChar
-                    // if newChar is digit, then we can fill the field
-                    if (newChar.isDigit()) {
-                        onNumberChanged(newChar.digitToIntOrNull())
-                    } else if (newChar == ZeroWidthChar) {
+                // Handle changes when the field was previously "empty" (only ZeroWidthChar)
+                if (oldText.all { it == ZeroWidthChar }) {
+                    val typedChar = newText.lastOrNull() ?: ZeroWidthChar
+                    
+                    if (typedChar.isDigit()) {
+                        // Valid digit entered
+                        onNumberChanged(typedChar.digitToIntOrNull())
+                    } else if (typedChar == ZeroWidthChar) {
+                        // The hidden character was deleted -> Signal backspace event
                         onKeyboardBack()
                     }
-                } else { //already filled field with not only ZeroWidthChar,
-                    //so in our case it would always be filled with digit
-
-                    // if user delete number from field there will be null
-                    val newChar = newText.lastOrNull()
-                    if (newChar == null) {
-                        // send callback to clear number
+                } 
+                // Handle changes when the field was already filled with a digit
+                else {
+                    val remainingChar = newText.lastOrNull()
+                    if (remainingChar == null) {
+                        // The digit was deleted by the user
                         onNumberChanged(null)
                     }
                 }
@@ -145,23 +162,18 @@ fun CodeButton(
                     onFocusChanged(it.isFocused)
                 },
             decorationBox = { innerTextField ->
-                Box(
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column {
-                        AnimatedVisibility(
-                            visible = number == null && !focused,
-                            enter = fadeIn(),
-                            exit = fadeOut(
-                                animationSpec = tween(100)
-                            )
-                        ) {
-                            Text(
-                                text = "0",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.7f)
-                            )
-                        }
+                Box(contentAlignment = Alignment.Center) {
+                    // Show a placeholder '0' when the field is empty and not focused
+                    AnimatedVisibility(
+                        visible = number == null && !focused,
+                        enter = fadeIn(),
+                        exit = fadeOut(animationSpec = tween(100))
+                    ) {
+                        Text(
+                            text = "0",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.7f)
+                        )
                     }
                     innerTextField()
                 }
