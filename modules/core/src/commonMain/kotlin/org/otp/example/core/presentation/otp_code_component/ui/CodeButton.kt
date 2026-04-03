@@ -30,15 +30,13 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.shadow.Shadow
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import org.otp.example.core.extensions.isDigitsOnly
+
+private const val ZeroWidthChar = '\u200B'
 
 @Composable
 fun CodeButton(
@@ -82,27 +80,54 @@ fun CodeButton(
             ),
         contentAlignment = Alignment.Center
     ) {
-        val text by remember(number) {
+        var text by remember(number) {
             mutableStateOf(
                 TextFieldValue(
-                    text = number?.toString().orEmpty(),
-                    selection = TextRange(
-                        index = if (number != null) 1 else 0
-                    )
+                    text = number?.toString() ?: ZeroWidthChar.toString(),
+                    //"_|" to insert new char after ZeroWidthChar or delete ZeroWidthChar
+                    selection = TextRange(index = 1)
                 )
             )
         }
         BasicTextField(
             value = text,
             cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-            onValueChange = { newText ->
-                val newNumber = newText.text
-                if (newNumber.length <= 1 && newNumber.isDigitsOnly()) {
-                    val oldNumber = text.text
-                    if (oldNumber == newNumber){
-                        return@BasicTextField
+            // hack in this solution is in ZeroWidthChar
+            // if we store it in text field value we now have 2 things:
+            // 1. onValueChange function will be triggered, because even it is a ZeroWidthChar
+            // it is still a char -> value changed -> callback triggers
+            // 2. user do not see cursor translation because of stored char in text field value
+            // and for user this text field is really empty, but not for us
+            onValueChange = { newValue ->
+                val oldText = text.text
+                val newText = newValue.text
+                if (oldText == newText) {
+                    return@BasicTextField
+                }
+
+                // here we check what WAS in the text field before editing
+                if (oldText.all { it == ZeroWidthChar }) { // "empty" field
+
+                    // here we check what user entered
+                    // if it is digit, then we can fill the field
+                    // if there is empty (null) -> convert to ZeroWidthChar
+                    // to prevent nullable
+                    val newChar = newText.lastOrNull() ?: ZeroWidthChar
+                    // if newChar is digit, then we can fill the field
+                    if (newChar.isDigit()) {
+                        onNumberChanged(newChar.digitToIntOrNull())
+                    } else if (newChar == ZeroWidthChar) {
+                        onKeyboardBack()
                     }
-                    onNumberChanged(newNumber.toIntOrNull())
+                } else { //already filled field with not only ZeroWidthChar,
+                    //so in our case it would always be filled with digit
+
+                    // if user delete number from field there will be null
+                    val newChar = newText.lastOrNull()
+                    if (newChar == null) {
+                        // send callback to clear number
+                        onNumberChanged(null)
+                    }
                 }
             },
             textStyle = MaterialTheme.typography.titleSmall.copy(
@@ -118,14 +143,6 @@ fun CodeButton(
                 .onFocusChanged {
                     focused = it.isFocused
                     onFocusChanged(it.isFocused)
-                }
-                .onKeyEvent { event ->
-                    val key = event.key
-                    val didPressDelete = key == Key.Backspace
-                    if(didPressDelete && number == null) {
-                        onKeyboardBack()
-                    }
-                    false
                 },
             decorationBox = { innerTextField ->
                 Box(

@@ -1,9 +1,7 @@
 package org.otp.example.core.presentation.otp_code_component
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -25,16 +23,6 @@ fun OtpCodeContent(
     verticalAlignment: Alignment.Vertical = Alignment.CenterVertically,
     horizontalArrangement: Arrangement.Horizontal = Arrangement.spacedBy(8.dp),
     component: OtpCodeComponent,
-    buttonUi: @Composable (
-        focusRequester: FocusRequester,
-        number: Int?,
-        onFocusChanged: (Boolean) -> Unit,
-        onNumberChanged: (Int?) -> Unit,
-        onKeyboardBack: () -> Unit,
-        enabled: Boolean,
-        error: Boolean,
-        modifier: Modifier,
-    ) -> Unit = ::CodeButton,
     loading: Boolean = false,
     error: Boolean = false
 ) {
@@ -67,21 +55,21 @@ fun OtpCodeContent(
         horizontalArrangement = horizontalArrangement
     ) {
         state.code.forEachIndexed { index, number ->
-            buttonUi.invoke(
-                focusRequesters[index],
-                number,
-                { isFocused ->
+            CodeButton(
+                focusRequester = focusRequesters[index],
+                number = number,
+                onFocusChanged = { isFocused ->
                     if (isFocused) {
                         component.onFieldFocused(index)
                     }
                 },
-                { newNumber ->
+                onNumberChanged = { newNumber ->
                     component.onNumberEnter(number = newNumber, index = index)
                 },
-                { component.onKeyboardBack() },
-                !loading,
-                error,
-                Modifier
+                onKeyboardBack = { component.onKeyboardBack() },
+                enabled = !loading,
+                error = error,
+                modifier = Modifier
                     .weight(1f)
                     .height(48.dp)
             )

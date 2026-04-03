@@ -1,9 +1,7 @@
 package org.otp.example.core.presentation.otp_code_component
 
 import androidx.compose.runtime.Stable
-import com.arkivanov.decompose.ComponentContext
 import com.arkivanov.decompose.value.Value
-import com.arkivanov.mvikotlin.core.store.StoreFactory
 import org.otp.example.core.presentation.otp_code_component.store.OtpCodeStore
 
 @Stable

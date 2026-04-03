@@ -18,6 +18,9 @@ internal class DefaultMainComponent(
     ) -> OtpCodeComponent
 ) : MainComponent(), ComponentContext by componentContext {
 
+    private val codeLength = 6
+    private val delayMs = 500L
+
     //"correct" code - just hardcoded for example
     // but You can use any logic here
     private val correctCode = "123456"
@@ -33,7 +36,7 @@ internal class DefaultMainComponent(
     override val isError: StateFlow<Boolean> = _isError.asStateFlow()
 
     override val otpCodeComponent: OtpCodeComponent =
-        otpCodeComponentProvider(componentContext, 6) { out ->
+        otpCodeComponentProvider(componentContext, codeLength) { out ->
             when (out) {
                 is OtpCodeComponent.Output.CodeFilled -> {
                     componentContext.mainScope().launch {
@@ -42,7 +45,7 @@ internal class DefaultMainComponent(
 
                         val code = out.code
                         _isLoading.value = true
-                        delay(500) // simulating network request
+                        delay(delayMs) // simulating network request
                         _isError.value = code != correctCode
                         _isSuccess.value = code == correctCode
                         _isLoading.value = false

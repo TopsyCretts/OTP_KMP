@@ -49,7 +49,12 @@ internal class OtpCodeStoreFactory(
                     dispatch(Message.Code(code = newCode))
 
                     if (newCode.all { it != null }) {
-                        publish(OtpCodeStore.Label.CodeFilled(code = newCode.joinToString(separator = "") { it.toString() }))
+                        publish(
+                            OtpCodeStore.Label
+                                .CodeFilled(
+                                    code = newCode.joinToString(separator = "") { it.toString() }
+                                )
+                        )
                     }
 
                     val wasNumberRemoved = number == null
@@ -71,6 +76,8 @@ internal class OtpCodeStoreFactory(
 
                     val previousIndex = getPreviousFocusedIndex(state.focusedIndex)
 
+                    dispatch(Message.FocusedIndex(previousIndex))
+
                     val newCode = state.code.mapIndexed { index, number ->
                         if (index == previousIndex) {
                             null
@@ -79,8 +86,6 @@ internal class OtpCodeStoreFactory(
                         }
                     }
                     dispatch(Message.Code(code = newCode))
-
-                    dispatch(Message.FocusedIndex(previousIndex))
                 }
             }
         }
@@ -137,9 +142,7 @@ internal class OtpCodeStoreFactory(
                 }
 
                 is Message.FocusedIndex -> {
-                    copy(
-                        focusedIndex = msg.index
-                    )
+                    copy(focusedIndex = msg.index)
                 }
             }
         }
