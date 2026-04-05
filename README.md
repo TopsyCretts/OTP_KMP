@@ -2,6 +2,12 @@
 
 This project is a high-quality Kotlin Multiplatform (KMP) sample demonstrating a robust, production-ready OTP (One-Time Password) input component. It follows modern architectural patterns using **Decompose** for lifecycle-aware component management and **MVIKotlin** for predictable state management.
 
+## 📱 Demo
+
+| Android | iOS |
+| :---: | :---: |
+| ![Android Demo](images/android.gif) | ![iOS Demo](images/ios.gif) |
+
 ## 🏗 Project Structure
 
 The project is organized into modular layers to ensure clear separation of concerns:
@@ -62,7 +68,7 @@ Instead of relying on unstable key events, we compare the **Old Value** and **Ne
 private const val ZeroWidthChar = '\u200B'
 
 // Force the text field to always have the hidden char when "empty"
-val text by remember(number) {
+var text by remember(number) {
     mutableStateOf(
         TextFieldValue(
             text = number?.toString() ?: ZeroWidthChar.toString(),
